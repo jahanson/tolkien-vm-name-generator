@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { generateVmNames, normalizeHostnamePart, parseCliArgs } from "./main.ts";
 
-Deno.test("default count is zero", () => {
+Deno.test("default count is one", () => {
   const options = parseCliArgs([]);
-  assert.equal(options.count, 0);
+  assert.equal(options.count, 1);
+});
+
+Deno.test("default count generates one name", () => {
+  assert.equal(generateVmNames({ seed: "default-one" }).length, 1);
 });
 
 Deno.test("positional count is parsed", () => {
@@ -14,10 +18,6 @@ Deno.test("positional count is parsed", () => {
 Deno.test("flag count overrides positional count", () => {
   const options = parseCliArgs(["5", "--count", "3"]);
   assert.equal(options.count, 3);
-});
-
-Deno.test("zero count returns empty array", () => {
-  assert.deepEqual(generateVmNames({ count: 0 }), []);
 });
 
 Deno.test("seeded output is repeatable", () => {

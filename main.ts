@@ -66,7 +66,7 @@ const ROLES = [
 function secureRandom(): number {
   const value = new Uint32Array(1);
   crypto.getRandomValues(value);
-  return value[0] / 0x1_0000_0000;
+  return value[0] / 0x100000000;
 }
 
 function hashSeed(seed: string): number {
@@ -88,7 +88,7 @@ function createSeededRandom(seed: string): RandomSource {
     let value = state;
     value = Math.imul(value ^ (value >>> 15), value | 1);
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 0x1_0000_0000;
+    return ((value ^ (value >>> 14)) >>> 0) / 0x100000000;
   };
 }
 
@@ -129,8 +129,8 @@ function buildName(
 }
 
 function validateOptions(options: Required<GeneratorOptions>): void {
-  if (!Number.isInteger(options.count) || options.count < 0 || options.count > 1_000) {
-    throw new RangeError("count must be an integer from 0 through 1000");
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 1_000) {
+    throw new RangeError("count must be an integer from 1 through 1000");
   }
 
   if (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 6) {
@@ -225,9 +225,68 @@ function splitFlag(argument: string): [string, string | undefined] {
     : [argument.slice(0, equalsIndex), argument.slice(equalsIndex + 1)];
 }
 
+function parsePositionalCount(
+  argument: string,
+  options: CliOptions,
+  countSet: boolean,
+): boolean {
+  if (countSet) return true;
+
+  const parsed = Number(argument);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 1_000) {
+    throw new Error("count must be an integer from 1 through 1000");
+  }
+
+  options.count = parsed;
+  return true;
+}
+
+function parseFlag(
+  flag: string,
+  takeValue: () => string | undefined,
+  options: CliOptions,
+): boolean {
+  const requireValue = (): string => {
+    const value = takeValue();
+    if (value === undefined) throw new Error(`${flag} requires a value`);
+    return value;
+  };
+
+  if (flag === "-n" || flag === "--count") {
+    options.count = parseInteger(requireValue(), flag, 1, 1_000);
+    return true;
+  }
+  if (flag === "-s" || flag === "--seed") {
+    options.seed = requireValue();
+    return false;
+  }
+  if (flag === "-p" || flag === "--prefix") {
+    options.prefix = requireValue();
+    return false;
+  }
+  if (flag === "-d" || flag === "--digits") {
+    options.digits = parseInteger(requireValue(), flag, 0, 6);
+    return false;
+  }
+  if (flag === "--max-length") {
+    options.maxLength = parseInteger(requireValue(), flag, 35, 63);
+    return false;
+  }
+  if (flag === "--json") {
+    options.json = true;
+    return false;
+  }
+  if (flag === "-h" || flag === "--help") {
+    options.help = true;
+    return false;
+  }
+
+  throw new Error(`unknown option: ${flag}`);
+}
+
 export function parseCliArgs(args: readonly string[]): CliOptions {
   const options: CliOptions = {
-    count: 0,
+    count: 1,
     digits: 2,
     maxLength: 63,
     json: false,
@@ -239,51 +298,13 @@ export function parseCliArgs(args: readonly string[]): CliOptions {
     const argument = args[index];
 
     if (!argument.startsWith("-")) {
-      if (countSet) continue;
-      const parsed = Number(argument);
-      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 1_000) {
-        throw new Error("count must be an integer from 0 through 1000");
-      }
-      options.count = parsed;
+      countSet = parsePositionalCount(argument, options, countSet);
       continue;
     }
 
     const [flag, inlineValue] = splitFlag(argument);
     const takeValue = (): string | undefined => inlineValue ?? args[++index];
-
-    switch (flag) {
-      case "-n":
-      case "--count":
-        options.count = parseInteger(takeValue(), flag, 0, 1_000);
-        countSet = true;
-        break;
-      case "-s":
-      case "--seed":
-        options.seed = takeValue();
-        if (options.seed === undefined) throw new Error(`${flag} requires a value`);
-        break;
-      case "-p":
-      case "--prefix":
-        options.prefix = takeValue();
-        if (options.prefix === undefined) throw new Error(`${flag} requires a value`);
-        break;
-      case "-d":
-      case "--digits":
-        options.digits = parseInteger(takeValue(), flag, 0, 6);
-        break;
-      case "--max-length":
-        options.maxLength = parseInteger(takeValue(), flag, 35, 63);
-        break;
-      case "--json":
-        options.json = true;
-        break;
-      case "-h":
-      case "--help":
-        options.help = true;
-        break;
-      default:
-        throw new Error(`unknown option: ${flag}`);
-    }
+    countSet = parseFlag(flag, takeValue, options) || countSet;
   }
 
   return options;
@@ -295,10 +316,10 @@ Usage:
   deno run main.ts [count] [options]
 
 Arguments:
-  count                      Number of unique names (default: 0)
+  count                      Number of unique names (default: 1)
 
 Options:
-  -n, --count <number>       Number of unique names (default: 0)
+  -n, --count <number>       Number of unique names (default: 1)
   -s, --seed <text>          Produce repeatable names
   -p, --prefix <text>        Prefix every name, e.g. web or prod
   -d, --digits <0-6>         Numeric suffix width (default: 2)
@@ -307,6 +328,7 @@ Options:
   -h, --help                 Show this help
 
 Examples:
+  deno run main.ts
   deno run main.ts 5
   deno run main.ts --count 5 --prefix prod
   deno run main.ts -n 3 --seed fellowship --json

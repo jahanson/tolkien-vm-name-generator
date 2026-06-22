@@ -4,8 +4,6 @@ A dependency-free Deno CLI that generates memorable, lowercase, DNS-label-friend
 
 ## Run
 
-Omitting a count generates no names.
-
 ```sh
 deno task names 5 --prefix prod
 ```
