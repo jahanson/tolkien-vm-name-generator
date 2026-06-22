@@ -6,8 +6,23 @@ Deno.test("default count is one", () => {
   assert.equal(options.count, 1);
 });
 
+Deno.test("numeric suffixes are disabled by default in CLI options", () => {
+  const options = parseCliArgs([]);
+  assert.equal(options.digits, 0);
+});
+
 Deno.test("default count generates one name", () => {
   assert.equal(generateVmNames({ seed: "default-one" }).length, 1);
+});
+
+Deno.test("generated names do not include numeric suffixes by default", () => {
+  const [name] = generateVmNames({ seed: "default-no-digits" });
+  assert.doesNotMatch(name, /-\d+$/);
+});
+
+Deno.test("numeric suffixes can be enabled with digits", () => {
+  const [name] = generateVmNames({ seed: "digits-enabled", digits: 2 });
+  assert.match(name, /-\d{2}$/);
 });
 
 Deno.test("positional count is parsed", () => {

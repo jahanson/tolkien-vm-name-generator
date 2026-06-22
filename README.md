@@ -8,6 +8,12 @@ A dependency-free Deno CLI that generates memorable, lowercase, DNS-label-friend
 deno task names 5 --prefix prod
 ```
 
+Add numeric suffixes when you want extra combinations:
+
+```sh
+deno task names 5 --prefix prod --digits 2
+```
+
 Repeatable output:
 
 ```sh

@@ -160,7 +160,7 @@ export function generateVmNames(options: GeneratorOptions = {}): string[] {
     count: options.count ?? 1,
     seed: options.seed ?? "",
     prefix: options.prefix ?? "",
-    digits: options.digits ?? 2,
+    digits: options.digits ?? 0,
     maxLength: options.maxLength ?? 63,
   };
 
@@ -287,7 +287,7 @@ function parseFlag(
 export function parseCliArgs(args: readonly string[]): CliOptions {
   const options: CliOptions = {
     count: 1,
-    digits: 2,
+    digits: 0,
     maxLength: 63,
     json: false,
     help: false,
@@ -322,7 +322,7 @@ Options:
   -n, --count <number>       Number of unique names (default: 1)
   -s, --seed <text>          Produce repeatable names
   -p, --prefix <text>        Prefix every name, e.g. web or prod
-  -d, --digits <0-6>         Numeric suffix width (default: 2)
+  -d, --digits <0-6>         Numeric suffix width (default: 0, off)
       --max-length <35-63>   Maximum hostname length (default: 63)
       --json                 Print a JSON array
   -h, --help                 Show this help
@@ -330,7 +330,7 @@ Options:
 Examples:
   deno run main.ts
   deno run main.ts 5
-  deno run main.ts --count 5 --prefix prod
+  deno run main.ts --count 5 --prefix prod --digits 2
   deno run main.ts -n 3 --seed fellowship --json
 `;
 
