@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "names": "deno run main.ts",
+    "test": "deno test",
+    "check": "deno fmt --check && deno lint && deno check main.ts main_test.ts",
+    "compile": "deno compile --output tolkien-vm-name main.ts"
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  }
+}
