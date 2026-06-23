@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { generateVmNames, normalizeHostnamePart, parseCliArgs } from "./main.ts";
 
-Deno.test("default count is one", () => {
+Deno.test("default count is five", () => {
   const options = parseCliArgs([]);
-  assert.equal(options.count, 1);
+  assert.equal(options.count, 5);
 });
 
 Deno.test("numeric suffixes are disabled by default in CLI options", () => {

@@ -2,8 +2,10 @@
   "tasks": {
     "names": "deno run main.ts",
     "test": "deno test",
-    "check": "deno fmt --check && deno lint && deno check main.ts main_test.ts",
-    "compile": "deno compile --output tolkien-vm-name main.ts"
+    "check": "deno fmt --check && deno lint && deno check main.ts main_test.ts scripts/install.ts scripts/install_test.ts",
+    "compile": "deno compile --output tolkien-vm-name main.ts",
+    "install": "deno run --allow-env --allow-read --allow-write --allow-run scripts/install.ts",
+    "pre-commit": "bash xtasks/pre-commit"
   },
   "fmt": {
     "lineWidth": 100,

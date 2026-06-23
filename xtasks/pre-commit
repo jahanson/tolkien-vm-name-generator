@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+#MISE description="Run proportional pre-commit checks"
+#MISE alias="pre"
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+FILES=$(git diff --cached --name-only --diff-filter=d)
+
+if [[ -z "$FILES" ]]; then
+	echo "No staged files, nothing to check."
+	exit 0
+fi
+
+HAS_CODE=false
+HAS_PROJECT_CONFIG=false
+HAS_WORKFLOW=false
+HAS_SHELL=false
+
+WORKFLOW_FILES=()
+SHELL_FILES=()
+
+find_tool() {
+	local name=$1
+	local candidate
+
+	for candidate in \
+		"$HOME/.local/share/mise/installs/$name/latest/$name" \
+		"$HOME/.local/share/mise/installs/$name/latest/bin/$name" \
+		"$HOME/.local/share/mise/installs/$name/latest/${name}-v"*"/$name"; do
+		if [[ -x "$candidate" ]]; then
+			printf '%s\n' "$candidate"
+			return 0
+		fi
+	done
+
+	if command -v "$name" >/dev/null 2>&1; then
+		command -v "$name"
+		return 0
+	fi
+
+	return 1
+}
+
+is_shell_script() {
+	local file=$1
+
+	[[ -f "$file" ]] || return 1
+
+	case "$file" in
+	*.sh) return 0 ;;
+	esac
+
+	local first_line
+	IFS= read -r first_line <"$file" || true
+	[[ "$first_line" =~ ^#!.*(ba)?sh ]]
+}
+
+while IFS= read -r file; do
+	case "$file" in
+	*.ts | *.tsx | *.js | *.jsx)
+		HAS_CODE=true
+		;;
+	deno.json | deno.jsonc | import_map.json | *.toml)
+		HAS_PROJECT_CONFIG=true
+		;;
+	.github/workflows/*.yml | .github/workflows/*.yaml)
+		HAS_WORKFLOW=true
+		WORKFLOW_FILES+=("$file")
+		;;
+	*)
+		if is_shell_script "$file"; then
+			HAS_SHELL=true
+			SHELL_FILES+=("$file")
+		fi
+		;;
+	esac
+done <<<"$FILES"
+
+echo "==> fmt"
+deno fmt --check
+
+if $HAS_PROJECT_CONFIG || $HAS_CODE; then
+	echo "==> check"
+	deno task check
+fi
+
+if $HAS_CODE; then
+	echo "==> test"
+	deno task test
+fi
+
+if $HAS_WORKFLOW; then
+	actionlint_bin=$(find_tool actionlint || true)
+	if [[ -z "$actionlint_bin" ]]; then
+		echo "actionlint is required for staged GitHub Actions workflow changes." >&2
+		exit 1
+	fi
+
+	shellcheck_bin=$(find_tool shellcheck || true)
+	echo "==> actionlint"
+	if [[ -n "$shellcheck_bin" ]]; then
+		"$actionlint_bin" -shellcheck "$shellcheck_bin" "${WORKFLOW_FILES[@]}"
+	else
+		"$actionlint_bin" -shellcheck "" "${WORKFLOW_FILES[@]}"
+	fi
+fi
+
+if $HAS_SHELL; then
+	shellcheck_bin=$(find_tool shellcheck || true)
+	shfmt_bin=$(find_tool shfmt || true)
+
+	if [[ -z "$shellcheck_bin" ]]; then
+		echo "shellcheck is required for staged shell script changes." >&2
+		exit 1
+	fi
+
+	if [[ -z "$shfmt_bin" ]]; then
+		echo "shfmt is required for staged shell script changes." >&2
+		exit 1
+	fi
+
+	echo "==> shellcheck"
+	"$shellcheck_bin" "${SHELL_FILES[@]}"
+
+	echo "==> shfmt"
+	"$shfmt_bin" -d "${SHELL_FILES[@]}"
+fi
+
+if ! $HAS_PROJECT_CONFIG && ! $HAS_CODE && ! $HAS_WORKFLOW && ! $HAS_SHELL; then
+	echo "Docs-only change, skipped lint/check/test."
+fi
+
+echo "Pre-commit checks passed."

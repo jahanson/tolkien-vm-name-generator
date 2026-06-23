@@ -286,7 +286,7 @@ function parseFlag(
 
 export function parseCliArgs(args: readonly string[]): CliOptions {
   const options: CliOptions = {
-    count: 1,
+    count: 5,
     digits: 0,
     maxLength: 63,
     json: false,
@@ -316,10 +316,10 @@ Usage:
   deno run main.ts [count] [options]
 
 Arguments:
-  count                      Number of unique names (default: 1)
+  count                      Number of unique names (default: 5)
 
 Options:
-  -n, --count <number>       Number of unique names (default: 1)
+  -n, --count <number>       Number of unique names (default: 5)
   -s, --seed <text>          Produce repeatable names
   -p, --prefix <text>        Prefix every name, e.g. web or prod
   -d, --digits <0-6>         Numeric suffix width (default: 0, off)
