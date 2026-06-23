@@ -33,3 +33,18 @@ jobs:
 
       - name: Run tests
         run: deno task test
+
+      - name: Install smoke test
+        if: runner.os != 'Windows'
+        run: |
+          install_dir="$RUNNER_TEMP/tolkien-vm-name-bin"
+          deno task install -- --dir "$install_dir"
+          "$install_dir/tolkien-vm-name" --seed ci-install
+
+      - name: Install smoke test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "tolkien-vm-name-bin"
+          deno task install -- --dir $installDir
+          & (Join-Path $installDir "tolkien-vm-name.exe") --seed ci-install
